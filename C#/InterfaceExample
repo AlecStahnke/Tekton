@@ -1,0 +1,19 @@
+using XXXX
+using System.Collections.Generic;
+
+namespace XXXX
+{
+    public interface IBlogsService
+    {
+         Blog GetById(int id);
+         Paged<Blog> GetAllBlogs(int pageIndex, int pageSize);
+         Paged<Blog> GetByBlogCategory( int pageIndex, int pageSize, int blogCategory);
+         Paged<Blog> GetByAuthorId(int pageIndex, int pageSize, int authorId);
+         Paged<Blog> Search(int pageIndex, int pageSize, string query);
+         void Delete(int id);
+         int Add(BlogAddRequest model, int authId);
+         void Update(BlogUpdateRequest model, int userId);
+         Paged<LookUp> GetAllBlogTypes(int pageIndex, int pageSize);
+         Blog GetLast();
+    }
+}
