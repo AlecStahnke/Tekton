@@ -1,0 +1,323 @@
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using XXXX
+
+namespace XXXX
+{
+    [Route("api/blogs")]
+    [ApiController]
+    public class BlogsApiController : BaseApiController
+    {
+
+        private IAuthenticationService<int> _authService = null;
+        private IBlogsService _service = null;
+        public BlogsApiController(IBlogsService service
+            , ILogger<BlogsApiController> logger
+            , IAuthenticationService<int> authService) : base(logger)
+        {
+            _service = service;
+            _authService = authService;
+        }
+        [HttpGet("{id:int}")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Blog>> GetById(int id)
+        {
+            int iCode = 200;
+            BaseResponse response = null;
+            try
+            {
+
+                _authService.GetCurrentUser();
+                Blog blog = _service.GetById(id);
+
+                if (blog == null)
+                {
+                    iCode = 404;
+                    response = new ErrorResponse("Blog not found.");
+                }
+                else
+                {
+                    response = new ItemResponse<Blog> { Item = blog };
+                }
+            }
+            catch (SqlException sqlEx)
+            {
+
+                iCode = 500;
+                base.Logger.LogError(sqlEx.ToString());
+                response = new ErrorResponse($"Generic Errors: {sqlEx.Message}");
+
+            }
+            return StatusCode(iCode, response);
+        }
+        [HttpGet("search")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Paged<Blog>>> Search(int pageIndex, int pageSize, string query)
+        {
+            int code = 200;
+            BaseResponse response = null;
+
+            try
+            {
+                Paged<Blog> list = _service.Search(pageIndex, pageSize, query);
+
+                if (list == null)
+                {
+                    code = 404;
+                    response = new ErrorResponse("Not Found");
+                }
+                else
+                {
+                    response = new ItemResponse<Paged<Blog>>() { Item = list };
+                }
+            }
+            catch (Exception ex)
+            {
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+            }
+
+            return StatusCode(code, response);
+        }
+        [HttpGet("all")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Paged<Blog>>> GetAll(int pageIndex, int pageSize)
+
+        {
+            int code = 200;
+
+            BaseResponse response = null;
+
+            try
+            {
+
+                Paged<Blog> page = _service.GetAllBlogs(pageIndex, pageSize);
+
+                if (page == null)
+                {
+                    code = 404;
+                    response = new ErrorResponse("App resource not found");
+                }
+                else
+                {
+                    response = new ItemResponse<Paged<Blog>> { Item = page };
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+                Logger.LogError(code, response.ToString());
+            }
+
+
+
+            return StatusCode(code, response);
+        }
+        [HttpGet("categories")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Paged<Blog>>> GetByBlogCategory( int pageIndex, int pageSize, int blogCategory)
+        {
+            int code = 200;
+            BaseResponse response = null;
+            try
+            {
+
+                _authService.GetCurrentUser();
+                Paged<Blog> page = _service.GetByBlogCategory( pageIndex, pageSize, blogCategory);
+                if (page == null)
+                {
+                    code = 404;
+                    response = new ErrorResponse("App resource not found");
+                }
+                else
+                {
+                    response = new ItemResponse<Paged<Blog>> { Item = page };
+                }
+            }
+            catch (Exception ex)
+            {
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+                Logger.LogError(code, response.ToString());
+            }
+            return StatusCode(code, response);
+        }
+        [HttpGet("authors")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Paged<Blog>>> GetByAuthorId(int pageIndex, int pageSize, int authorId)
+        {
+            int code = 200;
+
+            BaseResponse response = null;
+
+            try
+            {
+
+
+                Paged<Blog> page = _service.GetByAuthorId(pageIndex, pageSize, authorId);
+
+                if (page == null)
+                {
+                    code = 404;
+                    response = new ErrorResponse("App resource not found");
+                }
+                else
+                {
+                    response = new ItemResponse<Paged<Blog>> { Item = page };
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+                Logger.LogError(code, response.ToString());
+            }
+
+
+
+            return StatusCode(code, response);
+        }
+        [HttpDelete("{id:int}")]
+        public ActionResult<SuccessResponse> Delete(int id)
+        {
+            int code = 200;
+            BaseResponse response = null;
+            try
+            {
+
+                _authService.GetCurrentUser();
+                _service.Delete(id);
+                response = new SuccessResponse();
+
+            }
+            catch (Exception ex)
+            {
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+
+            }
+            return StatusCode(code, response);
+
+
+
+        }
+        [HttpPost]
+        public ActionResult<ItemResponse<int>> Create(BlogAddRequest model)
+        {
+            ObjectResult result = null;
+            try
+            {
+                int authId = _authService.GetCurrentUserId();
+                int id = _service.Add(model, authId);
+                ItemResponse<int> response = new ItemResponse<int>() { Item = id };
+                result = Created201(response);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.ToString());
+                ErrorResponse response = new ErrorResponse(ex.Message);
+                result = StatusCode(500, response);
+            }
+
+            return result;
+        }
+        [HttpPut("{id:int}")]
+        public ActionResult<ItemResponse<int>> Update(BlogUpdateRequest model)
+        {
+            int code = 200;
+            _authService.GetCurrentUser();
+            BaseResponse response = null;
+            int userId = _authService.GetCurrentUserId();
+            try
+            {
+                _service.Update(model, userId);
+
+                response = new SuccessResponse();
+
+
+            }
+            catch (Exception ex)
+            {
+
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+            }
+            return StatusCode(code, response);
+        }
+        [HttpGet("blogcategories")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Paged<LookUp>>> GetAllBlogTypes(int pageIndex, int pageSize)
+
+        {
+            int code = 200;
+            _authService.GetCurrentUser();
+            BaseResponse response = null;
+
+            try
+            {
+                Paged<LookUp> page = _service.GetAllBlogTypes(pageIndex, pageSize);
+
+                if (page == null)
+                {
+                    code = 404;
+                    response = new ErrorResponse("App resource not found");
+                }
+                else
+                {
+                    response = new ItemResponse<Paged<LookUp>> { Item = page };
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                code = 500;
+                response = new ErrorResponse(ex.Message);
+                Logger.LogError(code, response.ToString());
+            }
+
+            return StatusCode(code, response);
+        }
+
+        [HttpGet("last")]
+        [AllowAnonymous]
+        public ActionResult<ItemResponse<Blog>> GetLast()
+        {
+            int iCode = 200;
+            BaseResponse response = null;
+            try
+            {
+
+                Blog blog = _service.GetLast();
+
+                if (blog == null)
+                {
+                    iCode = 404;
+                    response = new ErrorResponse("Blog not found.");
+                }
+                else
+                {
+                    response = new ItemResponse<Blog> { Item = blog };
+                }
+            }
+            catch (Exception ex)
+            {
+
+                iCode = 500;
+                base.Logger.LogError(ex.ToString());
+                response = new ErrorResponse($"Generic Errors: {ex.Message}");
+
+            }
+            return StatusCode(iCode, response);
+        }
+
+
+    }
+}
