@@ -1,0 +1,52 @@
+ALTER     PROC [dbo].[Blogs_SelectAll]
+			@PageIndex int
+		   ,@PageSize int
+
+AS
+
+	DECLARE @offset int = @PageIndex * @PageSize;
+
+/*-----------------Test Code-------------------------
+
+Declare 
+		 @PageIndex int = 0
+		,@PageSize int = 5
+
+
+execute dbo.Blogs_SelectAll @PageIndex, @PageSize
+
+select *
+from dbo.blogs
+-----------------Test Code-------------------------*/
+
+BEGIN
+
+SELECT       b.Id
+			,bt.Id as BlogTypeId
+			,bt.[Name] as BlogTypeName
+			,up.Id as [userProfileId]
+			,up.UserId
+			,up.FirstName
+			,up.LastName
+			,up.MI
+			,up.AvatarUrl
+			,b.Title 
+			,b.[Subject]
+			,b.Content
+			,b.IsPublished
+			,b.ImageUrl
+			,b.DatePublished
+		    , TotalCount = COUNT (1) OVER()
+
+from dbo.Blogs as b 
+
+inner join dbo.BlogTypes as bt on b.BlogTypeId = bt.Id
+
+inner join dbo.UserProfiles as up  on b.AuthorId = up.UserId
+
+
+ORDER BY b.DatePublished desc
+	OFFSET @offSet Rows
+	Fetch Next @PageSize Rows ONLY
+
+END
