@@ -1,0 +1,418 @@
+import React from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import { Card, Row, Col, Breadcrumb, Stack, Button } from 'react-bootstrap';
+import Pagination from 'rc-pagination';
+import toastr from 'toastr';
+import PageTitle from './PageTitle';
+import blogsService from '../../services/blogsService';
+import RenderBlog from './RenderBlog';
+import logo from '../../assets/images/logo.webp';
+import { getTypes } from '../../services/lookupService';
+import '../../assets/scss/icons.scss';
+import './blog.css';
+import 'rc-pagination/assets/index.css';
+
+function Blogs(props) {
+    const [searchState, setSearchState] = useState('');
+    const [selectState, setSelectState] = useState('');
+    const [blogs, setBlogs] = useState([]);
+    const [blogTypes, setBlogTypes] = useState([]);
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        pageItems: 6,
+        totalItems: 0,
+        currentService: 'getAllBlogs',
+        currentFileType: 0,
+        currentSearchTerm: '',
+        currentSelectTerm: '',
+    });
+
+    useEffect(() => {
+        blogsService
+            .getAllBlogs(pagination.currentPage - 1, pagination.pageItems)
+            .then(onGetAllBlogsSuccess)
+            .catch(onGetAllBlogsError);
+        getBlogTypes();
+    }, []);
+
+    const getBlogTypes = () => {
+        getTypes(['BlogTypes']).then(onGetBlogTypesSuccess).catch(onGetBlogTypesError);
+    };
+    const onGetBlogTypesSuccess = (res) => {
+        setBlogTypes(res.item.blogTypes);
+    };
+    const onGetBlogTypesError = (err) => {
+        toastr.error("The latest blog couldn't be retrieved. " + err);
+    };
+    const onGetAllBlogsSuccess = (res) => {
+        setPagination((prevState) => {
+            return {
+                ...prevState,
+                totalItems: res.item.totalCount,
+            };
+        });
+        setBlogs(res.item.pagedItems);
+    };
+    const onGetAllBlogsError = (res) => {
+        toastr.error(res, `Couldn't get blogs. Please try again.`);
+    };
+    const mapBlogTypes = (blogType) => {
+        return (
+            <option value={blogType.id} key={`blogType_${blogType.id}`}>
+                {blogType.name}
+            </option>
+        );
+    };
+    const goToBlog = (blog) => {
+        return <RenderBlog key={`blog_key=${blog.id}`} blog={blog}></RenderBlog>;
+    };
+    const mapBlogs = (blog) => {
+        const formatDate = (dateString) => {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        };
+
+        return (
+            <React.Fragment key={blog.id}>
+                <Card className="shadow-lg p-3 mb-3 rounded marginAll blog-card-size h-100 justify-content-center">
+                    <Stack>
+                        <div style={{ transform: 'rotate(0)' }}>
+                            <div className="row">
+                                <div className="card-header blog-card-header-size">
+                                    <h1 className="blog-card-header-text">{blog.title}</h1>
+                                </div>
+                                <div className="col-1">
+                                    <Link to={`/blogs/${blog.id}`} className="stretched-link ">
+                                        <Button onClick={() => goToBlog(blog)} className="d-none">
+                                            Go To Blog
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                            <h4>{blog.subject}</h4>
+                            <img src={blog.imageUrl} alt="nothing to display" className=" card-img-bottom" />
+                        </div>
+                        <div className="row card-footer mt-1 ">
+                            <div className="col-12 ">
+                                <footer>
+                                    <img
+                                        src={blog.author.avatarUrl}
+                                        alt="avatar url"
+                                        className="blog-render-avatar-size rounded-circle mx-2"
+                                    />
+                                    {` `}
+                                    Published by:
+                                    <cite>
+                                        <Link to={`/blogs/authors/${blog.author.userId}`}>
+                                            {' '}
+                                            {` `}
+                                            {blog.author.firstName} {blog.author.mi}
+                                            {'.'} {blog.author.lastName}
+                                        </Link>
+                                    </cite>{' '}
+                                    on <cite>{formatDate(blog.datePublished)}</cite>
+                                </footer>
+                            </div>
+                        </div>
+                    </Stack>
+                </Card>
+            </React.Fragment>
+        );
+    };
+    const onPaginationChange = (e) => {
+        if (pagination.currentService === 'getAllBlogs') {
+            blogsService
+                .getAllBlogs(e - 1, pagination.pageItems)
+                .then(onPaginationChangeSuccess)
+                .catch(onAllError);
+        } else if (pagination.currentService === 'select') {
+            blogsService
+                .getBlogByCategory(e - 1, pagination.pageItems, pagination.currentSelectTerm)
+                .then(onPaginationChangeSuccess)
+                .catch(onAllError);
+        } else if (pagination.currentService === 'search') {
+            blogsService
+                .search(e - 1, pagination.pageItems, pagination.currentSearchTerm)
+                .then(onPaginationChangeSuccess)
+                .catch(onAllError);
+        }
+
+        setPagination((prevState) => {
+            return {
+                ...prevState,
+                currentPage: e,
+            };
+        });
+    };
+    const onPaginationChangeSuccess = (res) => {
+        setBlogs(res.item.pagedItems);
+    };
+    const onAllError = (err) => {
+        if (err.response.status === 404) {
+            setBlogs([]);
+            setPagination((prevState) => {
+                return {
+                    ...prevState,
+                    currentPage: 1,
+                    totalItems: 0,
+                };
+            });
+        }
+    };
+    const onBlogSelectChange = (e) => {
+    
+        const categorySelected = parseInt(e.target.value, 10);
+
+        if (categorySelected < 1) {
+            setPagination((prevState) => {
+                return {
+                    ...prevState,
+                    currentPage: 1,
+                    currentService: 'getAllBlogs',
+                    currentSearchTerm: '',
+                    currentSelectTerm: '',
+                };
+            });
+            setSelectState(categorySelected);
+            setSearchState('');
+            blogsService
+                .getAllBlogs(pagination.currentPage, pagination.pageItems)
+                .then(onGetAllBlogsSuccess)
+                .catch(onGetAllBlogsError);
+        } else if (categorySelected > 0) {
+            setSelectState(categorySelected);
+            setSearchState('');
+
+            blogsService
+                .getBlogByCategory(0, pagination.pageItems, categorySelected)
+                .then(onSelectByCategorySuccess)
+                .catch(onSelectByCategoryError);
+        }
+    };
+
+    const onSelectByCategorySuccess = (res) => {
+        setPagination((prevState) => {
+            return {
+                ...prevState,
+                currentPage: 0,
+                currentService: 'select',
+                currentSearchTerm: searchState,
+                currentSelectTerm: res.item?.pagedItems[0].blogType.id,
+                totalItems: res.item.totalCount,
+            };
+        });
+        setBlogs(res.item.pagedItems);
+    };
+    const onSelectByCategoryError = (err) => {
+        toastr.error(err, 'No blogs found by that query');
+        if (err.response.status === 404) {
+            setBlogs([]);
+            setPagination((prevState) => {
+                return {
+                    ...prevState,
+                    currentPage: 1,
+                    totalItems: 0,
+                };
+            });
+        }
+    };
+    const onSearchClear = () => {
+        if (pagination.currentSearchTerm !== '') {
+            setPagination((prevState) => {
+                return {
+                    ...prevState,
+                    currentPage: 1,
+                    currentService: 'getAllBlogs',
+                    currentSearchTerm: '',
+                    currentSelectTerm: '',
+                };
+            });
+
+            setSearchState('');
+            setSelectState('');
+            blogsService
+                .getAllBlogs(pagination.currentPage, pagination.pageItems)
+                .then(onGetAllBlogsSuccess)
+                .catch(onGetAllBlogsError);
+        } else if (pagination.currentSelectTerm) {
+            setPagination((prevState) => {
+                return {
+                    ...prevState,
+                    currentPage: 1,
+                    currentService: 'getAllBlogs',
+                    currentSearchTerm: '',
+                    currentSelectTerm: '',
+                };
+            });
+            setSelectState('');
+            setSearchState('');
+            blogsService
+                .getAllBlogs(pagination.currentPage, pagination.pageItems)
+                .then(onGetAllBlogsSuccess)
+                .catch(onGetAllBlogsError);
+        }
+    };
+
+    const onSearchSubmitSuccess = (res) => {
+        setPagination((prevState) => {
+            return {
+                ...prevState,
+                currentPage: 0,
+                currentService: 'search',
+                currentSearchTerm: searchState,
+                totalItems: res.item.totalCount,
+            };
+        });
+        setBlogs(res.item.pagedItems);
+    };
+    const onSearchSubmitError = (err) => {
+        toastr.error('No blogs found by that query');
+        if (err.response.status === 404) {
+            setBlogs([]);
+            setPagination((prevState) => {
+                return {
+                    ...prevState,
+                    currentPage: 1,
+                    totalItems: 0,
+                };
+            });
+        }
+    };
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        blogsService
+            .search(0, pagination.pageItems, searchState)
+            .then(onSearchSubmitSuccess)
+            .catch(onSearchSubmitError);
+    };
+    const handleSearchChange = (e) => {
+        setSearchState(() => e.target.value);
+    };
+
+    const checkAdminStatus = (user) => {
+        if (user.roles.includes('Admin')) {
+            return true;
+        } else return false;
+    };
+    return (
+        <React.Fragment>
+            <div className="container-fluid mt-2 blog-container-max-width ">
+                <Row>
+                    <Col lg={1}></Col>
+                    <Col lg={10}>
+                        <Stack direction="horizontal" className="d-flex justify-content-between">
+                            <PageTitle breadCrumbItems={[]} title={'Blogs'} />
+
+                            <Breadcrumb className="bg-light-lighten ps-2 float-end">
+                                <Breadcrumb.Item href="/">
+                                    <i className="uil-home-alt"></i> Home
+                                </Breadcrumb.Item>
+                                <Breadcrumb.Item active>Blogs</Breadcrumb.Item>
+                            </Breadcrumb>
+                        </Stack>
+                    </Col>
+                    <Col lg={1}></Col>
+                </Row>
+
+                <Stack>
+                    <Row className="">
+                        <Col lg={1}></Col>
+                        <Col lg={10} className="flex-column">
+                            <Card className="shadow-lg p-3 mb-4 rounded">
+                                <Card.Body>
+                                    <Stack>
+                                        <div className="clearfix">
+                                            <div className="float-start mb-3">
+                                                <img src={logo} alt="logo" height="100" />
+                                            </div>
+                                            <div className="float-end margin30">
+                                                <h4 className="m-0 d-print-none" id="blogtag">
+                                                    Blogs
+                                                </h4>
+                                            </div>
+                                        </div>
+                                        <Row className="mb-4 ">
+                                            <Col lg={3}>
+                                                {checkAdminStatus(props.currentUser) && (
+                                                    <Link to={'/blogs/create'}>
+                                                        <Button> Create a New Blog</Button>
+                                                    </Link>
+                                                )}
+                                            </Col>
+                                            <Col lg={4}>
+                                                <Pagination
+                                                    className="blogpagination centered"
+                                                    onChange={onPaginationChange}
+                                                    current={pagination.currentPage}
+                                                    pageSize={pagination.pageItems}
+                                                    total={pagination.totalItems}></Pagination>
+                                            </Col>
+                                            <Col lg={2}>
+                                                <select
+                                                    className="form-select"
+                                                    aria-label="Default select example"
+                                                    onChange={onBlogSelectChange}
+                                                    value={selectState}>
+                                                    <option value="0">Search by Category</option>
+                                                    {blogTypes.map(mapBlogTypes)}
+                                                </select>
+                                            </Col>
+
+                                            <Col lg={3}>
+                                                <form onSubmit={handleSearchSubmit}>
+                                                    <div className="input-group">
+                                                        <input
+                                                            value={searchState}
+                                                            onChange={handleSearchChange}
+                                                            type="text"
+                                                            className="form-control"
+                                                            placeholder="Search blogs..."></input>
+                                                        <button type="search" className="btn btn-primary mx-2">
+                                                            <i className="dripicons-search" />
+                                                        </button>
+                                                        <button
+                                                            type="reset"
+                                                            className="btn btn-primary "
+                                                            onClick={onSearchClear}>
+                                                            {' '}
+                                                            <i className="dripicons-cross" />
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </Col>
+                                        </Row>
+                                        <div className="blogs-container-container">{blogs.map(mapBlogs)}</div>
+                                        <Row>
+                                            <Col lg={4}></Col>
+                                            <Col lg={4} className="render-blog-center-pagination ">
+                                                <Pagination
+                                                    className="blogpagination centered"
+                                                    onChange={onPaginationChange}
+                                                    current={pagination.currentPage}
+                                                    pageSize={pagination.pageItems}
+                                                    total={pagination.totalItems}></Pagination>
+                                            </Col>
+                                            <Col lg={4}></Col>{' '}
+                                        </Row>
+                                    </Stack>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                        <Col lg={1}></Col>
+                    </Row>
+                </Stack>
+            </div>
+        </React.Fragment>
+    );
+}
+
+Blogs.propTypes = {
+    currentUser: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+        roles: PropTypes.arrayOf(PropTypes.string).isRequired,
+    }),
+};
+
+export default Blogs;
