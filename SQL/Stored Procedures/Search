@@ -1,0 +1,66 @@
+
+ALTER     PROC [dbo].[Blogs_Search]
+					@PageIndex int
+					,@PageSize int
+					,@Query nvarchar(100)
+
+
+AS
+
+
+/*
+
+Declare @PageIndex int = 0
+		,@PageSize int = 2
+		,@Query nvarchar(100) = 'title'
+
+Execute dbo.Blogs_Search
+				@PageIndex
+				,@PageSize
+				,@Query
+				 
+*/
+
+
+
+BEGIN
+
+	Declare @Offset int = @PageIndex * @PageSize
+
+	SELECT	
+			b.Id
+			,bt.Id as BlogTypeId
+		,bt.[Name] as BlogTypeName
+			,u.UserId
+		,u.FirstName
+			,u.LastName
+			,u.MI
+			,u.AvatarUrl
+			,Title 
+			,[Subject]
+			,Content 
+			,IsPublished 
+			,ImageUrl 
+			,DatePublished
+			
+			
+			,[TotalCount] = COUNT(1) OVER()
+
+	FROM [dbo].Blogs AS b
+		 INNER JOIN dbo.BlogTypes AS bt
+		 ON bt.Id = b.BlogTypeId
+		 INNER JOIN dbo.UserProfiles AS u
+		 ON u.UserId = b.AuthorId
+	
+	WHERE (
+	
+				Title LIKE '%' + @Query + '%'
+			OR [content] LIKE '%' + @Query + '%' 
+			OR [Subject] LIKE '%' + @Query + '%')
+
+	ORDER BY b.[Id]
+
+	OFFSET @offSet Rows
+	Fetch Next @PageSize Rows ONLY
+
+END
