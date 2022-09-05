@@ -1,0 +1,55 @@
+ALTER     PROC [dbo].[Blogs_Update]
+
+			 @Id int
+			,@BlogTypeId int
+			,@AuthorId int
+			,@Title nvarchar(50)
+			,@Subject nvarchar(50)
+			,@Content nvarchar(MAX)
+			,@IsPublished bit 
+			,@ImageUrl nvarchar(255)
+			,@DatePublished datetime2(7)
+	
+AS
+/*-----------------Test Code-----------------------------
+Declare 
+			 @Id int = 7
+			,@BlogTypeId int = 1
+			,@AuthorId int = 1
+			,@Title nvarchar(50) ='Title'
+			,@Subject nvarchar(50)='Subject'
+			,@Content nvarchar(1)='Content'
+			,@IsPublished bit 
+			,@ImageUrl nvarchar(255)='Image url'
+			
+			
+execute	 [dbo].[Blogs_Update]
+
+			 @Id 
+			,@BlogTypeId 
+			,@AuthorId 
+			,@Title
+			,@Subject 
+			,@Content 
+			,@IsPublished 
+			,@ImageUrl 
+		
+-----------------Test Code-----------------------------*/
+
+BEGIN
+
+UPDATE dbo.Blogs 
+
+	SET		
+			 BlogTypeId = @BlogTypeId
+		    ,AuthorId = @AuthorId
+			,Title = @Title 
+			,Subject = @Subject 
+			,Content = @Content 
+			,IsPublished = @IsPublished 
+			,ImageUrl = @ImageUrl 
+			,DatePublished = @DatePublished
+
+WHERE Id = @Id
+
+END
