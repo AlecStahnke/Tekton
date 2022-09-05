@@ -1,0 +1,31 @@
+ALTER     PROC [dbo].[Blogs_DeleteById]
+			@Id int
+
+AS
+
+
+
+
+/*-------------------------Test Code------------------------------
+
+
+DECLARE 
+
+@Id int = 6
+
+
+select *
+from dbo.Blogs
+
+execute [dbo].[Blogs_DeleteById] @Id
+
+select *
+from dbo.Blogs
+
+-------------------------Test Code------------------------------*/
+
+BEGIN
+
+DELETE dbo.Blogs WHERE Id = @Id
+
+END
