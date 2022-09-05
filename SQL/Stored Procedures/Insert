@@ -1,0 +1,76 @@
+ALTER        PROC [dbo].[Blogs_Insert]
+	    
+			 @BlogTypeId int
+			,@AuthorId int
+			,@Title nvarchar(50)
+			,@Subject nvarchar(50)
+			,@Content nvarchar(max)
+			,@IsPublished bit 
+			,@ImageUrl nvarchar(255)
+			,@DatePublished datetime2(7)
+			,@Id int OUTPUT
+
+AS
+
+/*-----------------Test Code-----------------------------
+SELECT * 
+	FROM dbo.[Blogs]
+
+DECLARE 	
+
+
+			@Id int = 0
+
+			,@BlogTypeId int = 1
+			,@AuthorId int = 1
+			,@Title nvarchar(50) = 'Placeholder Title'
+			,@Subject nvarchar(50)= 'Placeholder Subject'
+ 			,@Content nvarchar(1)= 'Y'
+			,@IsPublished bit = 1
+			,@ImageUrl nvarchar(255)= 'Placeholder Image URL'
+			,@DatePublished datetime2(7) = '12/12/3333'
+
+execute [dbo].[Blogs_Insert]
+
+			 @BlogTypeId 
+			,@AuthorId 
+			,@Title
+			,@Subject 
+ 			,@Content 
+			,@IsPublished
+			,@ImageUrl
+			,@DatePublished
+			,@Id OUTPUT
+
+	SELECT * 
+	FROM dbo.[Blogs]
+
+-----------------Test Code-----------------------------*/
+
+BEGIN
+
+INSERT INTO dbo.Blogs 
+
+			(BlogTypeId 
+			,AuthorId 
+			,Title 
+			,[Subject]
+			,Content 
+			,IsPublished 
+			,ImageUrl
+			,DatePublished)
+
+	Values		  
+			(@BlogTypeId 
+			,@AuthorId 
+			,@Title 
+			,@Subject
+			,@Content 
+			,@IsPublished 
+			,@ImageUrl
+			,@DatePublished)
+
+	set @Id  = SCOPE_IDENTITY()
+
+
+END
