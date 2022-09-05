@@ -1,0 +1,350 @@
+using XXXX
+
+namespace XXXX
+
+{
+    public class BlogsService : IBlogsService
+    {
+        private IDataProvider _data = null;
+        private IUserMapperService _userMapperService = null;
+        private ILookUpService _lookUpService = null;
+
+        public BlogsService(IDataProvider data, IUserMapperService userMapper, ILookUpService lookUpService)
+        {
+            _data = data;
+            _userMapperService = userMapper;
+            _lookUpService = lookUpService;
+        }
+        
+        public Blog GetById(int id)
+        {
+            string procName = "[dbo].[Blogs_SelectById]";
+
+            Blog blog = null;
+
+            _data.ExecuteCmd(procName, delegate (SqlParameterCollection paramCollection)
+            {
+                paramCollection.AddWithValue("@Id", id);
+            }, delegate (IDataReader reader, short set)
+            {
+                int startingIndex = 0;
+                blog = MapSingleBlog(reader, ref startingIndex);
+            }
+            );
+            return blog;
+        }
+
+        public Paged<Blog> GetAllBlogs(int pageIndex, int pageSize)
+        {
+            Paged<Blog> pagedList = null;
+            List<Blog> list = null;
+
+            int totalCount = 0;
+
+            _data.ExecuteCmd(
+                "dbo.Blogs_SelectAll",
+                (param) =>
+                {
+                    param.AddWithValue("@PageIndex", pageIndex);
+                    param.AddWithValue("@PageSize", pageSize);
+                },
+                    (reader, recordSetIndex) =>
+                    {
+                        int startingIndex = 0;
+                        Blog blog = MapSingleBlog(reader, ref startingIndex);
+                        if (totalCount == 0)
+                        {
+                            totalCount = reader.GetSafeInt32(startingIndex++);
+                        }
+
+                        if (list == null)
+                        {
+                            list = new List<Blog>();
+                        }
+                        list.Add(blog);
+                    });
+            if (list != null)
+            {
+                pagedList = new Paged<Blog>(list, pageIndex, pageSize, totalCount);
+            }
+            return pagedList;
+        }
+        public Paged<Blog> GetByBlogCategory( int pageIndex, int pageSize, int blogCategory)
+        {
+            Paged<Blog> pagedList = null;
+            List<Blog> list = null;
+            int totalCount = 0;
+           
+            _data.ExecuteCmd(
+                "dbo.Blogs_SelectBlogCategory",
+                inputParamMapper: delegate (SqlParameterCollection col)
+                {
+                    col.AddWithValue("@PageIndex", pageIndex);
+                    col.AddWithValue("@PageSize", pageSize);
+                    col.AddWithValue("@BlogTypeId", blogCategory);
+                },
+                    (reader, recordSetIndex) =>
+                    {
+                        int startingIndex = 0;
+                        Blog blog = MapSingleBlog(reader, ref startingIndex);
+                        if (totalCount == 0)
+                        {
+                            totalCount = reader.GetSafeInt32(startingIndex++);
+                        }
+
+                        if (list == null)
+                        {
+                            list = new List<Blog>();
+                        }
+                        list.Add(blog);
+                    });
+            if (list != null)
+            {
+                pagedList = new Paged<Blog>(list, pageIndex, pageSize, totalCount);
+            }
+            return pagedList;
+        }
+        public Paged<Blog> Search(int pageIndex, int pageSize, string query)
+        {
+            string procName = "[dbo].[Blogs_Search]";
+            List<Blog> list = null;
+            Paged<Blog> result = null;
+            int totalCount = 0;
+
+            _data.ExecuteCmd(procName, delegate (SqlParameterCollection col)
+            {
+                col.AddWithValue("@PageIndex", pageIndex);
+                col.AddWithValue("@PageSize", pageSize);
+                col.AddWithValue("@Query", query);
+            }, delegate (IDataReader reader, short set)
+            {
+                int index = 0;
+                Blog blog = MapSingleBlogV2(reader, ref index);
+                if (totalCount == 0)
+                {
+                    totalCount = reader.GetSafeInt32(index++);
+                }
+                if (list == null)
+                {
+                    list = new List<Blog>();
+                }
+                list.Add(blog);
+            });
+            if (list != null)
+            {
+                result = new Paged<Blog>(list, pageIndex, pageSize, totalCount);
+            }
+            return result;
+        }
+        public Paged<Blog> GetByAuthorId(int pageIndex, int pageSize, int authorId)
+        {
+            Paged<Blog> pagedList = null;
+            List<Blog> list = null;
+            int totalCount = 0;
+
+            _data.ExecuteCmd(
+                "dbo.Blogs_SelectByAuthorId",
+                (param) =>
+                {
+                    param.AddWithValue("@PageIndex", pageIndex);
+                    param.AddWithValue("@PageSize", pageSize);
+                    param.AddWithValue("@AuthorId", authorId);
+                },
+                    (reader, recordSetIndex) =>
+                    {
+                        int startingIndex = 0;
+
+                        Blog blog = MapSingleBlog(reader, ref startingIndex);
+
+                        if (totalCount == 0)
+                        {
+                            totalCount = reader.GetSafeInt32(startingIndex++);
+                        }
+
+                        if (list == null)
+                        {
+                            list = new List<Blog>();
+                        }
+                        list.Add(blog);
+                    });
+            if (list != null)
+            {
+                pagedList = new Paged<Blog>(list, pageIndex, pageSize, totalCount);
+            }
+            return pagedList;
+        }
+
+        public Paged<LookUp> GetAllBlogTypes(int pageIndex, int pageSize)
+        {
+            Paged<LookUp> pagedList = null;
+            List<LookUp> list = null;
+            int totalCount = 0;
+
+            _data.ExecuteCmd(
+                "dbo.BlogsTypes_SelectAll",
+                (param) =>
+                {
+                    param.AddWithValue("@PageIndex", pageIndex);
+                    param.AddWithValue("@PageSize", pageSize);
+                },
+                    (reader, recordSetIndex) =>
+                    {
+                        int startingIndex = 0;
+
+                        LookUp lookUp = MapLookUpTable(reader, ref startingIndex);
+                        totalCount = reader.GetSafeInt32(startingIndex++);
+
+                        if (list == null)
+                        {
+                            list = new List<LookUp>();
+                        }
+                        list.Add(lookUp);
+                    });
+            if (list != null)
+            {
+                pagedList = new Paged<LookUp>(list, pageIndex, pageSize, totalCount);
+            }
+            return pagedList;
+        }
+        public void Delete(int id)
+        {
+            string procName = "[dbo].[Blogs_DeleteById]";
+            _data.ExecuteNonQuery(procName,
+
+               inputParamMapper: delegate (SqlParameterCollection col)
+               {
+                   col.AddWithValue("@Id", id);
+               }, returnParameters: null);
+        }
+
+        public void Update(BlogUpdateRequest model, int userId)
+        {
+            string procName = "[dbo].[Blogs_Update]";
+            _data.ExecuteNonQuery(procName,
+
+               inputParamMapper: delegate (SqlParameterCollection col)
+               {
+                   UpdateBlogMapper(model, userId, col);
+               }, returnParameters: null);
+        }
+
+        public int Add(BlogAddRequest model, int authId)
+        {
+            int id = 0;
+            string procName = "[dbo].[Blogs_Insert]";
+            _data.ExecuteNonQuery(procName,
+
+                inputParamMapper: delegate (SqlParameterCollection col)
+                {
+                    AddBlogMapper(model, authId, col);
+                }, returnParameters: delegate (SqlParameterCollection returnCollection)
+                {
+                    object oId = returnCollection["@Id"].Value;
+                    int.TryParse(oId.ToString(), out id);
+                });
+            return id;
+        }
+
+        public Blog GetLast()
+        {
+            Blog blog = null;
+
+            string procName = "[dbo].[Blogs_SelectLast]";
+
+            _data.ExecuteCmd(procName, null, delegate (IDataReader reader, short set)
+            {
+                int index = 0;
+                blog = MapSingleBlog(reader, ref index);
+            });
+
+            return blog;
+        }
+
+       
+        private static LookUp MapLookUpTable(IDataReader reader, ref int startingIndex)
+        {
+            LookUp lookUp = null;
+            lookUp.Id = reader.GetSafeInt32(startingIndex++);
+            lookUp.Name = reader.GetSafeString(startingIndex++);
+            return lookUp;
+        }
+
+        private Blog MapSingleBlog(IDataReader reader, ref int index)
+        {
+            Blog blog = new Blog();
+
+            blog.Id = reader.GetSafeInt32(index++);
+            blog.BlogType = new LookUp();
+            blog.BlogType = _lookUpService.MapSingleLookUp(reader, ref index); 
+            blog.Author = _userMapperService.MapSingleUserProfile(reader, ref index);
+            blog.Title = reader.GetSafeString(index++);
+            blog.Subject = reader.GetSafeString(index++);
+            blog.Content = reader.GetSafeString(index++);
+            blog.IsPublished = reader.GetSafeBool(index++);
+            blog.ImageUrl = reader.GetSafeString(index++);
+            blog.DatePublished = reader.GetSafeDateTime(index++);
+
+            return blog;
+        }
+        private Blog MapSingleBlogV2(IDataReader reader, ref int index)
+        {
+            Blog blog = new Blog();
+
+            blog.Id = reader.GetSafeInt32(index++);
+            blog.BlogType = new LookUp();
+            blog.BlogType = _lookUpService.MapSingleLookUp(reader, ref index);
+
+            blog.Author = _userMapperService.MapSingleUserProfileV3(reader, ref index);
+            blog.Title = reader.GetSafeString(index++);
+            blog.Subject = reader.GetSafeString(index++);
+            blog.Content = reader.GetSafeString(index++);
+            blog.IsPublished = reader.GetSafeBool(index++);
+            blog.ImageUrl = reader.GetSafeString(index++);
+            blog.DatePublished = reader.GetSafeDateTime(index++);
+
+            return blog;
+        }
+        private BlogUpdateRequest UpdateBlogMapper(BlogUpdateRequest model, int userId, SqlParameterCollection col)
+        {
+            col.AddWithValue("@BlogTypeId", model.BlogTypeId);
+            col.AddWithValue("@AuthorId", userId);
+            col.AddWithValue("@Title", model.Title);
+            col.AddWithValue("@Subject", model.Subject);
+            col.AddWithValue("@Content", model.Content);
+            col.AddWithValue("@IsPublished", model.IsPublished);
+            col.AddWithValue("@ImageUrl", model.ImageUrl);
+            col.AddWithValue("@DatePublished", model.DatePublished);
+            col.AddWithValue("@Id", model.Id);
+
+            return model;
+        }
+
+        private BlogAddRequest AddBlogMapper(BlogAddRequest model, int userId, SqlParameterCollection col)
+        {
+            col.AddWithValue("@BlogTypeId", model.BlogTypeId);
+            col.AddWithValue("@AuthorId", userId);
+            col.AddWithValue("@Title", model.Title);
+            col.AddWithValue("@Subject", model.Subject);
+            if (model.Content == null)
+            {
+                col.AddWithValue("@Content", DBNull.Value);
+            }
+            else { col.AddWithValue("@Content", model.Content); }
+            col.AddWithValue("@IsPublished", model.IsPublished);
+            if (model.ImageUrl == null)
+            {
+                col.AddWithValue("@Content", DBNull.Value);
+            }
+            else { col.AddWithValue("@ImageUrl", model.ImageUrl); };
+            col.AddWithValue("@DatePublished", model.DatePublished.ToShortDateString());
+
+            SqlParameter idOut = new SqlParameter("@Id", SqlDbType.Int);
+            idOut.Direction = ParameterDirection.Output;
+
+            col.Add(idOut);
+
+            return model;
+        }
+       
+    }
+}
