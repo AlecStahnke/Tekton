@@ -1,9 +1,9 @@
 
 ALTER     PROC [dbo].[Blogs_Search]
-					@PageIndex int
-					,@PageSize int
-					,@Query nvarchar(100)
 
+			@PageIndex int
+			,@PageSize int
+			,@Query nvarchar(100)
 
 AS
 
@@ -15,13 +15,10 @@ Declare @PageIndex int = 0
 		,@Query nvarchar(100) = 'title'
 
 Execute dbo.Blogs_Search
-				@PageIndex
-				,@PageSize
-				,@Query
-				 
+			@PageIndex
+			,@PageSize
+			,@Query
 */
-
-
 
 BEGIN
 
@@ -30,9 +27,9 @@ BEGIN
 	SELECT	
 			b.Id
 			,bt.Id as BlogTypeId
-		,bt.[Name] as BlogTypeName
+			,bt.[Name] as BlogTypeName
 			,u.UserId
-		,u.FirstName
+			,u.FirstName
 			,u.LastName
 			,u.MI
 			,u.AvatarUrl
@@ -42,7 +39,6 @@ BEGIN
 			,IsPublished 
 			,ImageUrl 
 			,DatePublished
-			
 			
 			,[TotalCount] = COUNT(1) OVER()
 
